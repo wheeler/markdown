@@ -1,6 +1,6 @@
-# Recipe #1: Remove a dead polyfill function
+# jscodeshift Recipe: Remove a dead polyfill function
 
-Let's say I have some dead polyfill function that I want to remove. I have two code changes that need to happen all over the place. I want to do is remove all the import statements, and I want to not call the polyfill function anymore, instead leaving behind its single argument. A diff might look like this:
+Let's say I have some dead polyfill function that I want to remove. I have two code changes that need to happen all over the place. I want to remove all the import statements, and I want to not call the polyfill function anymore, instead leaving behind its single argument. A diff might look like this:
 
 ```diff
   import foo from 'foo';
@@ -14,9 +14,14 @@ Let's say I have some dead polyfill function that I want to remove. I have two c
   }
 ```
 
-This is a good candidate for codemod. Why? This is a one-time refactor. The refactor will remove all references to the polyfill file/package so I will remove also remove the polyfill in the same PR. Once that PR is landed nobody can even try to use it without having a compile error. Additionally, while it might be possible to replace the import using somewhat fancy regex, unwrapping the polyfill call would be quite hard unless you have some other special knowledge because there could be any manner of things as the argment: strings, vars, numbers, other function calls, inline functions, etc.
+This is a good candidate for codemod. Why?
 
-## Remove a specific import statement entirely
+- This is a one-time refactor.
+- The refactor will remove all references to the polyfill file/package so I will remove also remove the polyfill in the same PR.
+- Once that PR is landed nobody can even try to use it without having a compile error.
+- Additionally, while it might be possible to replace the import using somewhat fancy regex, unwrapping the polyfill call would be quite hard unless you have some other special knowledge because there could be any manner of things as the argment: strings, vars, numbers, other function calls, inline functions, etc.
+
+## Transform 1: Remove a specific import statement entirely
 
 In my case, `deadPolyfill` is the only export from the polyfill file, so I can make a simplifying assumption that I can always remove the whole import statement. I'll add a detail about how to handle this if that was not true later. Here's the first version of the transform I came up with to remove the imports:
 
@@ -41,11 +46,11 @@ note that `ImportSpecifier` is a separate AST type from `ImportDefaultSpecifier`
 
 ### OK, it worked! Let's make improvements and learn more!
 
-I was writing and testing in AST Explorer and once this worked I wanted to improve it and learn about some of the other utility of JSCodeShift along the way. With it working it's easier to refactor it iteratively to try to make the code shorter, less confusing, more efficient, and less fragile.
+I was writing and testing in AST Explorer and once this worked I wanted to improve it and learn about some of the other utility of JSCodeShift along the way. Once working it can be refactored iteratively to make the code shorter, less confusing, more efficient, and less fragile.
 
 1. Remove unnecessary nested `.find()`s
 
-   We only look for `ImportSpecifier`s that are inside of `ImportDeclaration`s... but I'm fairly certain it's not possible for them to appear anywhere else. So, we can just skip that `find`.
+   We only look for `ImportSpecifier`s that are inside of `ImportDeclaration`s... but logically they can't appear anywhere else. So, we can just skip that `find()`.
 
    ```diff
    root
@@ -57,9 +62,9 @@ I was writing and testing in AST Explorer and once this worked I wanted to impro
      });
    ```
 
-1. Use find's filter parameter instead of chaining a `.filter()`
+1. Use find's filter parameter instead of a chained `.filter()`
 
-   In this case, because our filter condition is simple, we can replace `.fitler()` with a filter parameter on `.find()`. You can do this when you're filtering by equality matching nested properties. If you're doing something fancier (or want to debug each path) you may need to stick with `.filter()`.
+   In this case, because our filter condition is simple, we can replace `.filter()` with a filter parameter on `.find()`. You can do this when you're filtering by equality matching nested properties. If you're doing something fancier (like filtering to multiple possible values) you may need to stick with `.filter()`.
 
    ```diff
    root
@@ -73,11 +78,11 @@ I was writing and testing in AST Explorer and once this worked I wanted to impro
 
 1. Use `.closest()` + `.remove()` instead of replacing the parent path in `.forEach()`.
 
-   `forEach` gives us the freedom to do whatever we want to the paths... and we need it because we're finding the right parent of the ImportSpecifier to remove. Collection has a `.remove()` function that will remove all the paths in the collection. So far we're finding `ImportSpecifier`, so if we called `.remove()` we would only remove the specifiers. Instead of removing the whole import line, it would change it to `import 'path/to/dead_polyfill';`. That is valid javascript... but it's not the result we want.
+   `forEach` gives us the freedom to do whatever we want to the paths... and we need it currently to get the right `parent` of the `ImportSpecifier` to remove. Collection has a `.remove()` function that will remove all the paths in the collection but we're finding `ImportSpecifier`, so if we called `.remove()` we would only remove the specifiers. That would change the line to `import 'path/to/dead_polyfill';` instead of removing the whole import line. That _is_ valid javascript... but it's _not_ what we want.
 
-   If we can map the collection into a collection of the parent `ImportDeclarations` then we can just call `remove()`. Since we already know from our inspection of the AST that the ImportSpecifier is always inside the ImportDeclaration we can use `.closest(j.ImportDeclaration)` to get a collection of the imports. Then we can just call `remove()`.
+   If we could map the collection into a collection of the parent `ImportDeclarations` then we can just call `remove()`. Since we already know from our inspection of the AST that the `ImportSpecifier` is always inside the `ImportDeclaration` we can use `.closest(j.ImportDeclaration)` to get a collection of the parent imports. Then we can just call `.remove()`.
 
-   This is extremely preferable to `forEach ... path.parentPath.parentPath.replace()` because `closest()` automatically takes care of how many parents up to go to find the right path. In our case was luckily always two, but in other transforms we may have a variable number of parent steps which would be a pain to write out.
+   This is extremely preferable to `forEach ... path.parentPath.parentPath.replace()` because `closest()` automatically figures out how many `.parents` to go up to find the right path. In our case was luckily always two, but in other transforms we may have a variable number of `parent` steps which would be a pain to write out.
 
    ```diff
    root
@@ -91,7 +96,7 @@ I was writing and testing in AST Explorer and once this worked I wanted to impro
 
 1. (optional) Yolo the ImportDeclaration with a more specific find filter parameter
 
-   If we could write a find filter parameter on ImportDeclaration that specified the imports we wanted then we wouldn't need to `.closest()` back up from the `ImportSpecifier`s. At some point this could become trickier than it is worth and the previous solution would be easier to write. I continued to look at the structure of the AST and was able to figure out the filter parameter object that has the same effect.
+   If we could write a find filter parameter on `ImportDeclaration` that specified the imports we wanted then we wouldn't need to use `.closest()` up from the `ImportSpecifier`s. This one wasn't too hard to figure out but at some point this could become trickier than it is worth and the previous solution would be easier to write. Looking at the structure of the AST I was able to figure out the filter parameter object that has the desired effect.
 
    ```diff
    root
@@ -101,9 +106,9 @@ I was writing and testing in AST Explorer and once this worked I wanted to impro
      .remove();
    ```
 
-1. (optional) Find using something with less structure
+1. (optional) `filter()` using something with less structure
 
-   In this case I realized that my import source might be a simpler way to filter. **Note that this would not be easier** if the import source might have different variations (various relative paths, absolute, etc.). In my case this wasn't useful.
+   I considered that my import source might be a simpler way to filter than the specifier. **Note that this would not be easier** if the import source might have different variations (various relative paths, absolute, etc.). Because of that, in my case this wasn't useful, but I leave it here as an example of a different approach.
 
    ```diff
    root
@@ -112,9 +117,9 @@ I was writing and testing in AST Explorer and once this worked I wanted to impro
      .remove();
    ```
 
-## Refactor away the wrapping function call
+## Transform 2: Remove a wrapping function call
 
-The second piece of the deprecated polyfill I want to remove is the calls. Fortunately my case is somewhat simple: the polyfill always takes one argument, and the refactor I want is to remove the call and leave the argument behind, alone and unwrapped. This part:
+The second piece of the deprecated polyfill I want to remove is the calls. Fortunately my case is somewhat simple: the polyfill always takes one argument, and the refactor I want is to remove the call and leave the argument behind, alone and unwrapped. An example would be this:
 
 ```diff
   function renderThingy () {
@@ -124,7 +129,7 @@ The second piece of the deprecated polyfill I want to remove is the calls. Fortu
   }
 ```
 
-This can be done using the `.replaceWith()` function on collection. I used the AST explorer to figure out the filter condition and where the argument to the call is. The following transform will find all `deadPolyfill(someArg)` calls and replace it with `someArg` in the context.
+This can be done using the `.replaceWith()` function on collection. We want to find the appropriate `CallExpression`s and call `replaceWith()` on the collection, returning the argument in the callback. I used the AST explorer to figure out the filter condition and where the argument to the call lives. The following transform will find all `deadPolyfill(someArg)` calls and replace it with `someArg` in the context.
 
 ```js
 export default function transformer(file, api) {
