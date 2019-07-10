@@ -236,7 +236,7 @@ example refactors:
 - import { helperA, deadPolyfill, helperB } from 'path/to/helpers';
 ```
 
-The transform that we have written will remove the entire line only if there is one named import specifier. We'll have to roll back filter optimization #4 if we want to match imports with multiple named import specifiers. Once we find the imports we might want to go back to the flexibility of `.forEach()` so we can handle them differently, but I found it easier to filter the collection into the two types we want to handle.
+The transform that we have written will remove the entire line only if there is one named import specifier. We'll have to roll back filter optimization #4 if we want to match imports with multiple named import specifiers. Once we find the imports it might be tempting to go back to the flexibility of `.forEach()` so we can handle them differently, but I found it easier to filter the collection into the two types we want to handle.
 
 ```js
 export default function transformer(file, api) {
