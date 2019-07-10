@@ -96,7 +96,7 @@ I was writing and testing in AST Explorer and once this worked I wanted to impro
 
 1. (optional) Yolo the ImportDeclaration with a more specific find filter parameter
 
-   If we could write a find filter parameter on `ImportDeclaration` that specified the imports we wanted then we wouldn't need to use `.closest()` up from the `ImportSpecifier`s. This one wasn't too hard to figure out but at some point this could become trickier than it is worth and the previous solution would be easier to write. Looking at the structure of the AST I was able to figure out the filter parameter object that has the desired effect.
+   If we could write a find filter parameter on `ImportDeclaration` that specified the imports we wanted then we wouldn't need to use `.closest()` up from the `ImportSpecifier`s. This one wasn't too hard to figure out but at some point this could become trickier than it is worth and the previous solution would be easier to write. Looking at the structure of the AST I was able to figure out the filter parameter object that has the desired effect. **NOTE**: this filter will only match imports that only have one specifier where the specifier is named `deadPolyfill`. It won't match imports with multiple specifiers where one is named `deadPolyfill`.
 
    ```diff
    root
@@ -162,7 +162,7 @@ const func = deadPolyfill(() => {
 
 ## Result
 
-We can put the two transforms together and get.
+Now we can put the two transforms together:
 
 ```js
 export default function transformer(file, api) {
@@ -217,4 +217,52 @@ If there are no matched imports this does two things:
 
 So, there we go, we have our desired transform and we learned some things along the way.
 
-:sparkle:
+:sparkles:
+
+## appendix
+
+### handling one of many imports
+
+If we didn't have the simplification that the import was always the only import from the source but instead it could either be the only one or one of multiple we'd have to write more flexible transform
+
+example refactors:
+
+```diff
+// solo import
+- import { deadPolyfill } from 'path/to/helpers';
+
+// multiple imports
++ import { helperA, helperB } from 'path/to/helpers';
+- import { helperA, deadPolyfill, helperB } from 'path/to/helpers';
+```
+
+The transform that we have written will remove the entire line only if there is one named import specifier. We'll have to roll back filter optimization #4 if we want to match imports with multiple named import specifiers. Once we find the imports we might want to go back to the flexibility of `.forEach()` so we can handle them differently, but I found it easier to filter the collection into the two types we want to handle.
+
+```js
+export default function transformer(file, api) {
+  const j = api.jscodeshift;
+  let root = j(file.source);
+
+  const imports = root
+    .find(j.ImportSpecifier, { imported: { name: 'deadPolyfill' } })
+    .closest(j.ImportDeclaration);
+
+  if (imports.size() === 0) return;
+
+  // If there is only one specifier, remove the entire import.
+  imports.filter(p => p.value.specifiers.length === 1).remove();
+  // For others, remove only the one specifier
+  imports
+    .filter(p => p.value) // this will match any ones not removed by the previous line
+    .find(j.ImportSpecifier, { imported: { name: 'deadPolyfill' } })
+    .remove();
+
+  root
+    .find(j.CallExpression, { callee: { name: 'deadPolyfill' } })
+    .replaceWith(path => {
+      return path.value.arguments[0];
+    });
+
+  return root.toSource();
+}
+```
