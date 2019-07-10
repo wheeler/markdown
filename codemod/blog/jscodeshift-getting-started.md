@@ -2,7 +2,7 @@
 
 ## Should I codemod or should I lint rule?
 
-\<flow chart\>
+![Lint rule vs codemod flowchart](img/lint-rule-codemod-flowchart.png)
 
 ## Guessing how hard it's going to be
 
@@ -26,8 +26,9 @@ Adding and moving line comments is perplexing. The line comments are stored in a
    - use https://astexplorer.net/
      - pick an appropriate language like `babel-eslint`
      - under transform pick `jscodeshift`
-     - paste your code to modify in the top left box
-     - write your transform in the bottom left box
+     - (if you're working on an `eslint` rule pick `espree` and `eslint`)
+     - paste your code to refactor in the top left box
+     - write your transform code in the bottom left box
      - preview the output in the bottom right box
    - Take the transform and save it in a file somewhere. I'll call mine `my_transform.js` and I saved it in `~/my_project/script/jscodeshift/`
 1. Run your transform on a single file to test. Inspect the result to make sure you like the output
@@ -41,10 +42,12 @@ Adding and moving line comments is perplexing. The line comments are stored in a
    $ jscodeshift -t script/jscodeshift/my_transform.js frontend/javascripts/components/**/*.jsx
    ```
 
-   > **NOTE**: `/**/` is glob notation for "any amount of subdirectories". This won't work by default in Mac terminals. Apple doesn't like GPL3 so they haven't upgraded bash versions since 2007. That old version doesn't support \*_ (it treats it as just two _ wildcards and you'll only match files with exactly one folder depth). You can work around this by installing your own bash, running it in the normal terminal, then running your command.
+   > **NOTE**: `/**/` is glob notation for "any amount of subdirectories". This won't work by default in Mac terminals. Apple doesn't like GPL3 so they haven't upgraded bash versions since 2007. That old version doesn't support `**` (it treats it as just two `*` wildcards back to back and you'll only match files at exactly one folder depth, no more no less). You can work around this by installing a modern bash, running it in the normal terminal, then running your command.
    >
    > ```shell
    > $ brew install bash
+   > ...
+   > # [installation happens]
    > ...
    > $ bash
    > bash-5.0$ jscodeshift -t script/jscodeshift/my_transform.js frontend/javascripts/components/**/>*.jsx
