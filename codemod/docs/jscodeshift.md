@@ -584,7 +584,13 @@
 575: "yieldExpression"
 576: "yieldStatement"
 
+## Typescript Definitions
+#### [Collection](https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/jscodeshift/src/Collection.d.ts)
+
+#### [Node](https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/jscodeshift/src/collections/Node.d.ts)
+
 ## keys on s (Collection)
+
 
 0: "\_\_paths"
 1: "\_parent"
@@ -595,7 +601,7 @@ childElements()
 childNodes()
 closest()
 closestScope()
-find()
+find(type: TypeDefinition, filter?) -> Collection
 findJSXElements()
 findJSXElementsByModuleName()
 findVariableDeclarators: ƒ findVariableDeclarators(e)
@@ -609,7 +615,7 @@ replaceWith()
 at: ƒ at(e)
 constructor: ƒ Collection(e,t,r)
 every: ƒ every(e)
-filter: ƒ filter(e)
+filter: ƒ filter(e) ()
 forEach: ƒ forEach(e)
 get: ƒ ()
 getAST: ƒ getAST()
