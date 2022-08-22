@@ -24,7 +24,7 @@ Adding and moving line comments is perplexing. The line comments are stored in a
    ```
 1. Write a transform file
    - use https://astexplorer.net/
-     - pick an appropriate language like `babel-eslint`
+     - pick an appropriate language like `babel-eslint` or `@typescript-eslint/parser`
      - under transform pick `jscodeshift`
      - (if you're working on an `eslint` rule pick `espree` and `eslint`)
      - paste your code to refactor in the top left box
@@ -42,7 +42,7 @@ Adding and moving line comments is perplexing. The line comments are stored in a
    $ jscodeshift -t script/jscodeshift/my_transform.js frontend/javascripts/components/**/*.jsx
    ```
 
-   > **NOTE**: `/**/` is glob notation for "any amount of subdirectories". This won't work by default in Mac terminals. Apple doesn't like GPL3 so they haven't upgraded bash versions since 2007. That old version doesn't support `**` (it treats it as just two `*` wildcards back to back and you'll only match files at exactly one folder depth, no more no less). You can work around this by installing a modern bash, running it in the normal terminal, then running your command.
+   > **NOTE**: `/**/` is glob notation for "any amount of subdirectories". This won't work by default in Mac terminals. Apple doesn't like GPL3 so they haven't upgraded bash versions since 2007. That old version doesn't support `**` (it treats it as just two `*` wildcards back to back and you'll only match files at exactly one folder depth, no more no less). You can work around this by installing a modern bash, running that bash, configuring globstar on, then running your command.
    >
    > ```shell
    > $ brew install bash
@@ -50,6 +50,9 @@ Adding and moving line comments is perplexing. The line comments are stored in a
    > # [installation happens]
    > ...
    > $ bash
+   > bash-5.0$ shopt globstar
+   > globstar       	off                     # if you see "off" run the next line
+   > bash-5.0$ shopt -s globstar
    > bash-5.0$ jscodeshift -t script/jscodeshift/my_transform.js frontend/javascripts/components/**/>*.jsx
    > ```
 
