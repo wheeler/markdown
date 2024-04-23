@@ -107,7 +107,7 @@ export default function transformer(file, api) {
 ```
 
 final
-```
+```js
 // Commands to run (must be run in higher bash version than default on mac to get ** glob to work)
 // find frontend/javascripts/components/ -name *.[jt]sx | xargs jscodeshift -t script/rr-redirect-migration.js --parser=tsx
 // find frontend/javascripts/spec/components/ -name *.[jt]sx | xargs jscodeshift -t script/rr-redirect-migration.js --parser=tsx
